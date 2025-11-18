@@ -1,0 +1,31 @@
+create table kha1.products(
+	id serial primary key,
+	name varchar(100),
+	price numeric(10,2),
+	last_modified timestamp
+);
+
+
+create or replace function update_last_modified()
+returns trigger 
+as $$
+begin
+	new.last_modified := now();
+	return new;
+end;
+$$ LANGUAGE plpgsql;
+
+create or replace trigger trg_update_last_modified before update on kha1.products
+for each row
+execute function update_last_modified();
+
+insert into kha1.products(name , price , last_modified) values
+('Laptop', 1500.00, NOW()),
+('Smartphone', 800.00, NOW()),
+('Tablet', 400.00, NOW());
+select * from kha1.products
+
+update kha1.products set price = 1600
+where name like 'Laptop';
+
+select * from kha1.products;
