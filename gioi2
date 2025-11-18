@@ -1,0 +1,57 @@
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    stock INT
+);
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    product_id INT REFERENCES products(id),
+    quantity INT
+);
+INSERT INTO products(name, stock)VALUES 
+('iPhone 15', 100),
+('iPhone 15 pro', 150),
+('iPhone 16', 200),
+('iPhone 14', 80);
+
+CREATE OR REPLACE FUNCTION update_product_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Đơn hàng mới → trừ số lượng tồn kho
+    IF TG_OP = 'INSERT' THEN
+        UPDATE products
+        SET stock = stock - NEW.quantity
+        WHERE id = NEW.product_id;
+
+        RETURN NEW;
+
+    -- Cập nhật đơn hàng → điều chỉnh theo chênh lệch
+    ELSIF TG_OP = 'UPDATE' THEN
+        UPDATE products
+        SET stock = stock - (NEW.quantity - OLD.quantity)
+        WHERE id = NEW.product_id;
+
+        RETURN NEW;
+
+    -- Xóa đơn hàng → trả lại số lượng
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE products
+        SET stock = stock + OLD.quantity
+        WHERE id = OLD.product_id;
+
+        RETURN OLD;
+    END IF;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_update_product_stock
+AFTER INSERT OR UPDATE OR DELETE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION update_product_stock();
+
+INSERT INTO orders(product_id, quantity)
+VALUES (4, 19);
+select* from orders;
+SELECT * FROM products;
